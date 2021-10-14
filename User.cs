@@ -13,8 +13,7 @@ namespace Projet_pizzeria
         private string city;
         private string postalCode;
         private string entity;
-
-
+        
         public User()
         {
             this.user_id = count++;

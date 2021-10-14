@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "Gmdq7wgEcTiQy/uVUm1gds0vQL8GASI0XwyifnVEwsfdMreImWZti0QHoXBiLVmzy0wGaXSoMlHAZ6w0BUlPUg==",
+  "dgSpecHash": "MjVmXxBJZbQLvG8lH8IYUKrTcP1SaLdYtpQQaCQprtWtpb2KciqMJiXNe/gbj75ZXGWA+/GoNkGemfjEf1xTQA==",
   "success": true,
   "projectFilePath": "D:\\EFREI\\M1\\Integration_de_systemes_Applications\\Projet\\Projet_pizzeria\\Projet_pizzeria.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\locop\\.nuget\\packages\\npgsql\\5.0.10\\npgsql.5.0.10.nupkg.sha512",
+    "C:\\Users\\locop\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\4.6.0\\system.runtime.compilerservices.unsafe.4.6.0.nupkg.sha512"
+  ],
   "logs": []
 }
