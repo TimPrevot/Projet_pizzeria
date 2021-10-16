@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Cryptography;
@@ -19,12 +21,15 @@ namespace Projet_pizzeria
 
         private User connectedClerk;
         private User actualClient;
+        private List<Product> menu = new List<Product>();
         
         public User ConnectedClerk { get; set; }
         
         public User ActualClient { get; set; }
         
         public bool IsConnected { get; set; }
+        
+        public List<Product> Menu { get; set; }
         
         // Function to connect the clerk
         public bool connectClerk()
@@ -95,6 +100,48 @@ namespace Projet_pizzeria
                     return false;
                 }
             }
+        }
+
+        public void getMenu()
+        {
+            const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
+            var ncon = new NpgsqlConnection(postgreConStr);
+            var cmd = new NpgsqlCommand("SELECT * FROM menu WHERE available", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+
+            var dt = new DataTable();
+            dt.Columns.Add(new DataColumn("product_id", typeof(int)));
+            dt.Columns.Add(new DataColumn("product_type", typeof(int)));
+            dt.Columns.Add(new DataColumn("price", typeof(int)));
+            dt.Columns.Add(new DataColumn("name", typeof(string)));
+            dt.Columns.Add(new DataColumn("size", typeof(int)));
+            dt.Columns.Add(new DataColumn("available", typeof(bool)));
+            Console.WriteLine("Collecting data...");
+            while (dr.Read())
+            {
+                var row = dt.NewRow();
+                row["product_id"] = dr["product_id"];
+                row["product_type"] = dr["product_type"];
+                row["price"] = dr["price"];
+                row["name"] = dr["name"];
+                row["size"] = dr["size"];
+                row["available"] = dr["available"];
+                dt.Rows.Add(row);
+                var newItem = new Product();
+                newItem.ProductId = Convert.ToInt32(dr["product_id"].ToString());
+                newItem.ProductType = Convert.ToInt32(dr["product_type"].ToString());
+                newItem.Price = Convert.ToInt32(dr["price"].ToString());
+                newItem.Name = dr["product_id"].ToString();
+                newItem.Size = dr["product_id"].ToString();
+                newItem.Available = Convert.ToBoolean(dr["product_id"]);
+                menu.Add(newItem);
+            }
+            Console.WriteLine("All items collected.");
+            Console.WriteLine("The whole menu today is: ");
+            PrintTable(dt);
+            ncon.Close();
+            dt.AcceptChanges();
         }
 
         private static string GetHash(HashAlgorithm hashAlgorithm, string input)
@@ -240,7 +287,7 @@ namespace Projet_pizzeria
         {
             var newOrder = new Order();
             newOrder.Date = DateTime.Now;
-            
+
             Console.WriteLine("Created order");
         }
 
@@ -255,6 +302,7 @@ namespace Projet_pizzeria
                 {
                     isConnected = myApp.connectClerk();
                 }
+                myApp.getMenu();
                 Console.WriteLine("To create a new order, type 1");
                 Console.WriteLine("To add a new user, type 2");
                 Console.WriteLine("To exit the app, type 0");
