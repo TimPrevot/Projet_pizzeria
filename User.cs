@@ -13,6 +13,8 @@ namespace Projet_pizzeria
         private string city;
         private string postalCode;
         private int entity;
+        private string username;
+        private string password;
 
 
         public int UserId
@@ -29,41 +31,21 @@ namespace Projet_pizzeria
 
         public string FirstName { get; set; }
 
-        public string LastName
-        {
-            get;
-            set;
-        }
+        public string LastName { get; set; }
 
-        public string Tel
-        {
-            get;
-            set;
-        }
+        public string Tel { get; set; }
 
-        public string Address
-        {
-            get;
-            set;
-        }
+        public string Address { get; set; }
 
-        public string City
-        {
-            get;
-            set;
-        }
+        public string City { get; set; }
 
-        public string PostalCode
-        {
-            get;
-            set;
-        }
+        public string PostalCode { get; set; }
 
-        public int Entity
-        {
-            get;
-            set;
-        }
+        public int Entity { get; set; }
+        
+        public string Username { get; set; }
+        
+        public string Password { get; set; }
 
         public User()
         {
