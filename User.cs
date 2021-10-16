@@ -12,8 +12,59 @@ namespace Projet_pizzeria
         private string address;
         private string city;
         private string postalCode;
-        private string entity;
-        
+        private int entity;
+
+
+        public int UserId
+        {
+            get { return user_id; }
+            set
+            {
+                if (user_id == 0)
+                {
+                    user_id = value;
+                }
+            }
+        }
+
+        public string FirstName { get; set; }
+
+        public string LastName
+        {
+            get;
+            set;
+        }
+
+        public string Tel
+        {
+            get;
+            set;
+        }
+
+        public string Address
+        {
+            get;
+            set;
+        }
+
+        public string City
+        {
+            get;
+            set;
+        }
+
+        public string PostalCode
+        {
+            get;
+            set;
+        }
+
+        public int Entity
+        {
+            get;
+            set;
+        }
+
         public User()
         {
             this.user_id = count++;

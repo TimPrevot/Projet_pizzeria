@@ -11,7 +11,6 @@ D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debu
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.AssemblyInfoInputs.cache
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.AssemblyInfo.cs
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.csproj.CoreCompileInputs.cache
-D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.csproj.CopyComplete
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.dll
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\ref\Projet_pizzeria.dll
 D:\EFREI\M1\Integration_de_systemes_Applications\Projet\Projet_pizzeria\obj\Debug\netcoreapp5.0\Projet_pizzeria.pdb
