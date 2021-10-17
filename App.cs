@@ -17,11 +17,12 @@ namespace Projet_pizzeria
         {
             this.actualClient = new User();
             this.connectedClerk = new User();
+            this.menu = new List<Product>();
         }
 
         private User connectedClerk;
         private User actualClient;
-        private List<Product> menu = new List<Product>();
+        private List<Product> menu;
         
         public User ConnectedClerk { get; set; }
         
@@ -37,6 +38,7 @@ namespace Projet_pizzeria
             const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
             var ncon = new NpgsqlConnection(postgreConStr);
             
+            // TODO Input check
             Console.WriteLine("username: ");
             var username = Console.ReadLine();
             Console.WriteLine("password: ");
@@ -148,6 +150,7 @@ namespace Projet_pizzeria
         // Function to change the available parameter on a product
         public void changeAvailable()
         {
+            // TODO input check
             Console.WriteLine("Please write the name of the product you want to modify: ");
             var productName = Console.ReadLine();
             Console.WriteLine("Please indicate the size of the item (1, 2 or 3");
@@ -228,6 +231,7 @@ namespace Projet_pizzeria
                 const string postgresConStr =
                     "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
                 var ncon = new NpgsqlConnection(postgresConStr);
+                // TODO Input check
                 Console.WriteLine("Please enter the client's phone number");
                 var telClient = Console.ReadLine();
                 var cmd = new NpgsqlCommand("SELECT * FROM users WHERE telephone = '" + telClient + "'", ncon);
@@ -273,12 +277,14 @@ namespace Projet_pizzeria
             else if (isNew == 0)
             {
                 this.addNewUser();
+                // TODO put the new user's info in the actualClient variable
             }
         }
 
         // Function to add a new user to the db
         public void addNewUser()
         {
+            // TODO Input checks
             Console.WriteLine("Please enter the user's first name: ");
             var firstname = Console.ReadLine();
             Console.WriteLine("Please enter the user's last name: ");
@@ -299,6 +305,7 @@ namespace Projet_pizzeria
             string pwd = null;
             if (entity == 1)
             {
+                // TODO Input checks
                 Console.WriteLine("Please enter the user's username: ");
                 username = Console.ReadLine();
                 Console.WriteLine("Please enter the user's password: ");
@@ -325,10 +332,10 @@ namespace Projet_pizzeria
                           "', '" + city + "', '" + postalCode + "', '" + entity + "')";
             }
             
-            Console.WriteLine("req: " + req);
             var cmd = new NpgsqlCommand(req, ncon);
             ncon.Open();
             cmd.ExecuteNonQuery();
+            ncon.Close();
             Console.WriteLine("Client added !");
         }
 
@@ -337,7 +344,40 @@ namespace Projet_pizzeria
         {
             var newOrder = new Order();
             newOrder.Date = DateTime.Now;
+            var addMore = true;
+            while (addMore)
+            {
+                // TODO check the availability of the item before adding it
+                var newProduct = new Product();
+                Console.WriteLine("Please enter the name of the item :");
+                var itemName = Console.ReadLine();
+                Console.WriteLine("Please enter the size of the item :");
+                var itemSize = Console.ReadLine();
+                newProduct.Name = itemName;
+                newProduct.Size = itemSize;
+                newOrder.Items.Add(newProduct);
+                Console.WriteLine("Do you want to add one more item ? 1 for Yes, 0 for No");
+                var choice = Convert.ToInt32(Console.ReadLine());
+                if (choice == 0)
+                {
+                    addMore = false;
+                }
+            }
+            const string postgreConStr = 
+                "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
+            var ncon = new NpgsqlConnection(postgreConStr);
+            var reqItems = "";
+            for (int i = 0; i < newOrder.Items.Count; i++)
+            {
+                reqItems = String.Concat(reqItems, "', '", newOrder.Items[i].Name);
+            }
 
+            var cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES ('" + newOrder.OrderId + "', '" +
+                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" + 
+                                         this.connectedClerk.UserId + reqItems + "')", ncon);
+            ncon.Open();
+            cmd2.ExecuteNonQuery();
+            ncon.Close();
             Console.WriteLine("Created order");
         }
 

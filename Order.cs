@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Projet_pizzeria
 {
@@ -10,11 +11,13 @@ namespace Projet_pizzeria
         private DateTime date;
         private int client;
         private int clerk;
+        private List<Product> items;
 
         // Constructor
         public Order()
         {
-            this.orderId = count++;
+            this.items = new List<Product>();
+            this.Items = new List<Product>();
         }
 
         // Getters and setters
@@ -25,5 +28,7 @@ namespace Projet_pizzeria
         public int Client { get; set; }
 
         public int Clerk { get; set; }
+        
+        public List<Product> Items { get; set; }
     }
 }
