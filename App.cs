@@ -102,6 +102,7 @@ namespace Projet_pizzeria
             }
         }
 
+        // Function to get all the available items from the db
         public void getMenu()
         {
             const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
@@ -143,7 +144,53 @@ namespace Projet_pizzeria
             ncon.Close();
             dt.AcceptChanges();
         }
+        
+        // Function to change the available parameter on a product
+        public void changeAvailable()
+        {
+            Console.WriteLine("Please write the name of the product you want to modify: ");
+            var productName = Console.ReadLine();
+            Console.WriteLine("Please indicate the size of the item (1, 2 or 3");
+            int size = Convert.ToInt32(Console.ReadLine());
+            
+            const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
+            var ncon = new NpgsqlConnection(postgreConStr);
+            var res = false;
+            var cmd = new NpgsqlCommand("SELECT available FROM menu WHERE name = '" + productName + "' AND size = '" +
+                                        size + "'", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
 
+            var dt = new DataTable();
+            dt.Columns.Add(new DataColumn("available", typeof(bool)));
+            while (dr.Read())
+            {
+                var row = dt.NewRow();
+                row["available"] = dr["available"];
+                dt.Rows.Add(row);
+                res = Convert.ToBoolean(dr["available"]);
+            }
+            ncon.Close();
+            dt.AcceptChanges();
+            
+            if (res == true)
+            {
+                cmd = new NpgsqlCommand("UPDATE menu SET available = false WHERE name = '" + productName +
+                                            "' AND size = '" + size + "'", ncon);
+            }
+            else
+            {
+                cmd = new NpgsqlCommand("UPDATE menu SET available = true WHERE name = '" + productName + "' AND size = '" +
+                                        size + "'", ncon);
+            }
+            
+            ncon.Open();
+            cmd.ExecuteNonQuery();
+            ncon.Close();
+            getMenu();
+        }
+        
+        // Function to hash a string input
         private static string GetHash(HashAlgorithm hashAlgorithm, string input)
         {
             byte[] data = hashAlgorithm.ComputeHash(Encoding.UTF8.GetBytes(input));
@@ -156,6 +203,7 @@ namespace Projet_pizzeria
             return sBuilder.ToString();
         }
 
+        // Function to compare a passord with a hashed password stored in the db
         private static bool VerifyHash(HashAlgorithm hashAlgorithm, string input, string hash)
         {
             var hashOfInput = GetHash(hashAlgorithm, input);
@@ -228,6 +276,7 @@ namespace Projet_pizzeria
             }
         }
 
+        // Function to add a new user to the db
         public void addNewUser()
         {
             Console.WriteLine("Please enter the user's first name: ");
@@ -283,6 +332,7 @@ namespace Projet_pizzeria
             Console.WriteLine("Client added !");
         }
 
+        // Function to create a new order
         public void createOrder()
         {
             var newOrder = new Order();
@@ -305,9 +355,10 @@ namespace Projet_pizzeria
                 myApp.getMenu();
                 Console.WriteLine("To create a new order, type 1");
                 Console.WriteLine("To add a new user, type 2");
+                Console.WriteLine("To change the availability of an item, type 3");
                 Console.WriteLine("To exit the app, type 0");
                 var choice = Convert.ToInt32(Console.ReadLine());
-                while (choice != 1 && choice != 2 && choice != 0)
+                while (choice != 1 && choice != 2 && choice != 3 && choice != 0)
                 {
                     Console.WriteLine("Please enter a correct value.");
                     choice = Convert.ToInt32(Console.ReadLine());
@@ -321,6 +372,10 @@ namespace Projet_pizzeria
                 else if (choice == 2)
                 {
                     myApp.addNewUser();
+                }
+                else if (choice == 3)
+                {
+                    myApp.changeAvailable();
                 }
                 else if (choice == 0)
                 {
