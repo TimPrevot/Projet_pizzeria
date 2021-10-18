@@ -5,7 +5,6 @@ namespace Projet_pizzeria
     public class User
     {
         private int user_id;
-        private static int count = 0;
         private string firstName;
         private string lastName;
         private string tel;
@@ -17,17 +16,7 @@ namespace Projet_pizzeria
         private string password;
 
 
-        public int UserId
-        {
-            get { return user_id; }
-            set
-            {
-                if (user_id == 0)
-                {
-                    user_id = value;
-                }
-            }
-        }
+        public int UserId { get; set; }
 
         public string FirstName { get; set; }
 
@@ -42,14 +31,9 @@ namespace Projet_pizzeria
         public string PostalCode { get; set; }
 
         public int Entity { get; set; }
-        
-        public string Username { get; set; }
-        
-        public string Password { get; set; }
 
-        public User()
-        {
-            this.user_id = count++;
-        }
+        public string Username { get; set; }
+
+        public string Password { get; set; }
     }
 }

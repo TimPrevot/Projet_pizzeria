@@ -20,11 +20,5 @@ namespace Projet_pizzeria
         public string Size { get; set; }
         public bool Available { get; set; }
 
-        // Constructor
-        public Product()
-        {
-            this.productId = count++;
-        }
-
     }
 }
