@@ -13,6 +13,7 @@ namespace Projet_pizzeria
         private string city;
         private string postalCode;
         private string entity;
+        
 
 
         public User()
@@ -72,8 +73,17 @@ namespace Projet_pizzeria
             return this.entity;
         }
 
-        public string SetEntity(){
-            this.entity = Entity;
+        public string SetEntity(string entity){
+
+            if( entity = "commis" | entity = "livreur" | entity = "client"){
+                this.entity = Entity;
+            }
+            else{
+                Console.WriteLine("Unknown entity");
+            }
+            
         }
+
+
     }
 }
