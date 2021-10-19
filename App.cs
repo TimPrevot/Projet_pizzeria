@@ -63,22 +63,8 @@ namespace Projet_pizzeria
             ncon.Open();
             var dr = cmd.ExecuteReader();
 
-            var dt = new DataTable();
-            dt.Columns.Add(new DataColumn("user_id", typeof(int)));
-            dt.Columns.Add(new DataColumn("firstname", typeof(string)));
-            dt.Columns.Add(new DataColumn("lastname", typeof(string)));
-            dt.Columns.Add(new DataColumn("telephone", typeof(string)));
-            dt.Columns.Add(new DataColumn("username", typeof(string)));
-            dt.Columns.Add(new DataColumn("password", typeof(string)));
             while (dr.Read())
             {
-                var row = dt.NewRow();
-                row["user_id"] = dr["user_id"];
-                row["firstname"] = dr["firstname"];
-                row["lastname"] = dr["lastname"];
-                row["telephone"] = dr["telephone"];
-                row["password"] = dr["password"];
-                dt.Rows.Add(row);
                 hashedPwd = dr["password"].ToString();
                 user_id = Convert.ToInt32(dr["user_id"].ToString());
                 firstname = dr["firstname"].ToString();
@@ -87,7 +73,6 @@ namespace Projet_pizzeria
             }
 
             ncon.Close();
-            dt.AcceptChanges();
 
             using (SHA256 sha256Hash = SHA256.Create())
             {
@@ -184,15 +169,9 @@ namespace Projet_pizzeria
                 ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
-            var dt = new DataTable();
-            dt.Columns.Add(new DataColumn("name", typeof(string)));
-            dt.Columns.Add(new DataColumn("size", typeof(int)));
+
             while (dr.Read())
             {
-                var row = dt.NewRow();
-                row["name"] = dr["name"];
-                row["size"] = dr["size"];
-                dt.Rows.Add(row);
                 if (dr["name"].ToString() == productName && Convert.ToInt32(dr["size"].ToString()) == productSize)
                 {
                     checkProduct = true;
@@ -204,7 +183,6 @@ namespace Projet_pizzeria
             }
 
             ncon.Close();
-            dt.AcceptChanges();
 
             if (checkProduct == true)
             {
@@ -214,18 +192,12 @@ namespace Projet_pizzeria
                 ncon.Open();
                 dr = cmd.ExecuteReader();
 
-                dt = new DataTable();
-                dt.Columns.Add(new DataColumn("available", typeof(bool)));
                 while (dr.Read())
                 {
-                    var row = dt.NewRow();
-                    row["available"] = dr["available"];
-                    dt.Rows.Add(row);
                     res = Convert.ToBoolean(dr["available"]);
                 }
 
                 ncon.Close();
-                dt.AcceptChanges();
 
                 if (res == true)
                 {
@@ -279,7 +251,7 @@ namespace Projet_pizzeria
             }
 
             // If this is not the client's first order, we get his info from the database
-            if (isNew == 1)
+            if (isNew == 0)
             {
                 var ncon = new NpgsqlConnection(PostgreConStr);
                 Console.WriteLine("Please enter the client's phone number");
@@ -295,27 +267,8 @@ namespace Projet_pizzeria
                 ncon.Open();
                 var dr = cmd.ExecuteReader();
 
-                var dt = new DataTable();
-                dt.Columns.Add(new DataColumn("user_id", typeof(int)));
-                dt.Columns.Add(new DataColumn("firstname", typeof(string)));
-                dt.Columns.Add(new DataColumn("lastname", typeof(string)));
-                dt.Columns.Add(new DataColumn("telephone", typeof(string)));
-                dt.Columns.Add(new DataColumn("address", typeof(string)));
-                dt.Columns.Add(new DataColumn("city", typeof(string)));
-                dt.Columns.Add(new DataColumn("postal_code", typeof(string)));
-                dt.Columns.Add(new DataColumn("entity_id", typeof(int)));
                 while (dr.Read())
                 {
-                    var row = dt.NewRow();
-                    row["user_id"] = dr["user_id"];
-                    row["firstname"] = dr["firstname"];
-                    row["lastname"] = dr["lastname"];
-                    row["telephone"] = dr["telephone"];
-                    row["address"] = dr["address"];
-                    row["city"] = dr["city"];
-                    row["postal_code"] = dr["postal_code"];
-                    row["entity_id"] = dr["entity_id"];
-                    dt.Rows.Add(row);
                     this.actualClient.UserId = Convert.ToInt32(dr["user_id"].ToString());
                     this.actualClient.FirstName = dr["firstname"].ToString();
                     this.actualClient.LastName = dr["lastname"].ToString();
@@ -327,11 +280,10 @@ namespace Projet_pizzeria
                 }
 
                 ncon.Close();
-                dt.AcceptChanges();
                 Console.WriteLine("Client : " + this.actualClient.FirstName + " " +
                                   this.actualClient.LastName + ", tel: " + this.actualClient.Tel);
             }
-            else if (isNew == 0)
+            else
             {
                 this.addNewUser();
             }
@@ -391,15 +343,17 @@ namespace Projet_pizzeria
             Console.WriteLine("Please enter the user's entity type: ");
             Console.WriteLine("1: clerk");
             Console.WriteLine("2: client");
+            Console.WriteLine("3: driver");
             var entity = Convert.ToInt32(Console.ReadLine());
-            while (entity != 1 && entity != 2)
+            while (entity != 1 && entity != 2 && entity != 3)
             {
                 Console.WriteLine("Please type a correct value");
                 entity = Convert.ToInt32(Console.ReadLine());
             }
+
             var username = "";
             var pwd = "";
-            
+
             if (entity == 1)
             {
                 Console.WriteLine("Please enter the user's username: ");
@@ -438,6 +392,12 @@ namespace Projet_pizzeria
                       address +
                       "', '" + city + "', '" + postalCode + "', '" + entity + "', '" + username + "', '" + pwd + "')";
             }
+            else if (entity == 3)
+            {
+                req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" +
+                      address +
+                      "', '" + city + "', '" + postalCode + "', '" + entity + "', default, default, 'true')";
+            }
             else
             {
                 req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" +
@@ -445,6 +405,7 @@ namespace Projet_pizzeria
                       "', '" + city + "', '" + postalCode + "', '" + entity + "')";
             }
 
+            Console.WriteLine("req: " + req);
             var cmd = new NpgsqlCommand(req, ncon);
             ncon.Open();
             cmd.ExecuteNonQuery();
@@ -458,7 +419,7 @@ namespace Projet_pizzeria
             var newOrder = new Order();
             newOrder.Date = DateTime.Now;
             var addMore = true;
-            var checkAvailable = true;
+            var checkAvailable = false;
             var ncon = new NpgsqlConnection(PostgreConStr);
             while (addMore)
             {
@@ -467,18 +428,28 @@ namespace Projet_pizzeria
                 var itemName = Console.ReadLine();
                 Console.WriteLine("Please enter the size of the item :");
                 var itemSize = Console.ReadLine();
+                newProduct.Name = itemName;
+                newProduct.Size = itemSize;
                 var cmd = new NpgsqlCommand(
-                    "SELECT available FROM menu WHERE name = '" + itemName + "' AND size = '" + itemSize + "'", ncon);
+                    "SELECT price FROM menu WHERE name = '" + itemName + "' AND size = '" + itemSize + "'", ncon);
                 ncon.Open();
                 var dr = cmd.ExecuteReader();
-                var dt = new DataTable();
-                dt.Columns.Add(new DataColumn("name", typeof(string)));
-                dt.Columns.Add(new DataColumn("size", typeof(int)));
                 while (dr.Read())
                 {
-                    var row = dt.NewRow();
-                    row["available"] = dr["available"];
-                    dt.Rows.Add(row);
+                    newProduct.Price = Convert.ToInt32(dr["price"].ToString());
+                }
+                ncon.Close();
+                /*foreach (var item in this.menu.Where(item => item.Name.Equals(itemName)))
+                {
+                    newProduct.Price = item.Price;
+                }*/
+
+                cmd = new NpgsqlCommand(
+                    "SELECT available FROM menu WHERE name = '" + itemName + "' AND size = '" + itemSize + "'", ncon);
+                ncon.Open();
+                dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
                     if (Convert.ToBoolean(dr["available"]) == false)
                     {
                         Console.WriteLine("Sorry ! This item is not available");
@@ -491,36 +462,322 @@ namespace Projet_pizzeria
                 }
 
                 ncon.Close();
-                dt.AcceptChanges();
 
                 if (checkAvailable)
                 {
-                    newProduct.Name = itemName;
-                    newProduct.Size = itemSize;
                     newOrder.Items.Add(newProduct);
+                    newOrder.Price += newProduct.Price;
                 }
-
+                // TODO Input check
                 Console.WriteLine("Do you want to add one more item ? 1 for Yes, 0 for No");
+                checkAvailable = false;
                 var choice = Convert.ToInt32(Console.ReadLine());
                 if (choice == 0)
                 {
                     addMore = false;
                 }
             }
-
-            var reqItems = "";
-            for (int i = 0; i < newOrder.Items.Count; i++)
+            
+            // Choosing a driver
+            var driverId = -1;
+            var cmd2 = new NpgsqlCommand("SELECT user_id FROM users WHERE entity_id = 3 AND available", ncon);
+            ncon.Open();
+            var dr2 = cmd2.ExecuteReader();
+            while (dr2.Read())
             {
-                reqItems = String.Concat(reqItems, "', '", newOrder.Items[i].Name);
+                driverId = Convert.ToInt32(dr2["user_id"].ToString());
+            }
+            ncon.Close();
+            
+            var reqItems = "";
+            for (int i = 0; i < 6; i++)
+            {
+                if (i <= newOrder.Items.Count - 1)
+                {
+                    reqItems = String.Concat(reqItems, "', '", newOrder.Items[i].Name);
+                }
+                else if (i == newOrder.Items.Count)
+                {
+                    reqItems = String.Concat(reqItems, "', default");
+                }
+                else
+                {
+                    reqItems = String.Concat(reqItems, ", default");
+                }
             }
 
-            var cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES (default, '" +
+            cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES (default, '" +
                                          newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
-                                         this.connectedClerk.UserId + reqItems + "')", ncon);
+                                         this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price + "')", ncon);
+            Console.WriteLine("req: INSERT INTO orders VALUES (default, '" +
+                                                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
+                                                                         this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price + "')");
             ncon.Open();
             cmd2.ExecuteNonQuery();
             ncon.Close();
             Console.WriteLine("Created order");
+        }
+
+        // Function to get the number of deliveries made by a driver
+        public int getDeliveries()
+        {
+            Console.WriteLine("Please write the firstname of the driver: ");
+            var driverName = Console.ReadLine();
+            while (driverName.GetType() != typeof(string) || driverName == "")
+            {
+                Console.WriteLine("Please enter a correct input");
+                driverName = Console.ReadLine();
+            }
+
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT user_id FROM users WHERE firstname = '" + driverName + "'", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            var driverId = -1;
+            var totalDeliveries = 0;
+            while (dr.Read())
+            {
+                driverId = Convert.ToInt32(dr["user_id"]);
+            }
+
+            ncon.Close();
+
+            cmd = new NpgsqlCommand("SELECT COUNT (*) FROM orders WHERE driver = " + driverId, ncon);
+            ncon.Open();
+            dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                totalDeliveries = Convert.ToInt32(dr["count"]);
+            }
+            ncon.Close();
+            return totalDeliveries;
+        }
+
+        // Function to get the nb of orders done by a clerk
+        public int getClerkOrders()
+        {
+            Console.WriteLine("Please write the firstname of the clerk: ");
+            var clerkName = Console.ReadLine();
+            while (clerkName.GetType() != typeof(string) || clerkName == "")
+            {
+                Console.WriteLine("Please enter a correct input");
+                clerkName = Console.ReadLine();
+            }
+
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT user_id FROM users WHERE firstname = '" + clerkName + "'", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            var clerkId = -1;
+            var totalOrders = 0;
+            while (dr.Read())
+            {
+                clerkId = Convert.ToInt32(dr["user_id"]);
+            }
+
+            ncon.Close();
+
+            cmd = new NpgsqlCommand("SELECT COUNT (*) FROM orders WHERE clerk = " + clerkId, ncon);
+            ncon.Open();
+            dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                totalOrders = Convert.ToInt32(dr["count"]);
+            }
+
+            ncon.Close();
+            return totalOrders;
+        }
+
+        // Function to get the orders between two dates
+        public void getOrdersByDate()
+        {
+            Console.WriteLine("Please give the first date (format: Jan 1, 2000) :");
+            var date1 = Console.ReadLine();
+            Console.WriteLine("Please give the second date (format: Jan 1, 2000) :");
+            var date2 = Console.ReadLine();
+            while (date1.GetType() != typeof(string) || date2.GetType() != typeof(string) || date1 == "" || date2 == "")
+            {
+                Console.WriteLine("Please enter a correct value");
+                Console.Write("First date (format: Jan 1, 2000) : ");
+                date1 = Console.ReadLine();
+                Console.Write("Second date (format: Jan 1, 2000) : ");
+                date2 = Console.ReadLine();
+            }
+            var parsedDate1 = DateTime.Parse(date1);
+            var parsedDate2 = DateTime.Parse(date2);
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand(
+                "SELECT * FROM orders WHERE date BETWEEN '" + parsedDate1 + "' AND '" + parsedDate2 + "' ORDER BY date", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            var dt = new DataTable();
+            dt.Columns.Add(new DataColumn("order_id", typeof(int)));
+            dt.Columns.Add(new DataColumn("date", typeof(DateTime)));
+            dt.Columns.Add(new DataColumn("client", typeof(int)));
+            dt.Columns.Add(new DataColumn("clerk", typeof(int)));
+            dt.Columns.Add(new DataColumn("driver", typeof(int)));
+            dt.Columns.Add(new DataColumn("product", typeof(string)));
+            dt.Columns.Add(new DataColumn("product2", typeof(string)));
+            dt.Columns.Add(new DataColumn("product3", typeof(string)));
+            dt.Columns.Add(new DataColumn("product4", typeof(string)));
+            dt.Columns.Add(new DataColumn("product5", typeof(string)));
+            dt.Columns.Add(new DataColumn("product6", typeof(string)));
+            dt.Columns.Add(new DataColumn("price", typeof(int)));
+            while (dr.Read())
+            {
+                var row = dt.NewRow();
+                row["order_id"] = dr["order_id"];
+                row["date"] = dr["date"];
+                row["client"] = dr["client"];
+                row["clerk"] = dr["clerk"];
+                row["driver"] = dr["driver"];
+                row["product"] = dr["product"];
+                row["product2"] = dr["product2"];
+                row["product3"] = dr["product3"];
+                row["product4"] = dr["produc4"];
+                row["product5"] = dr["product5"];
+                row["product6"] = dr["product6"];
+                row["price"] = dr["price"];
+                dt.Rows.Add(row);
+            }
+            Console.WriteLine("All orders collected");
+            PrintTable(dt);
+            ncon.Close();
+            dt.AcceptChanges();
+        }
+        
+        public void displayUser(int entity, string order, string role)
+        {
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id="+entity+" ORDER BY "+ order +" ", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            
+            var dt = new DataTable();
+            dt.Columns.Add(new DataColumn("user_id", typeof(int)));
+            dt.Columns.Add(new DataColumn("firstName", typeof(string)));
+            dt.Columns.Add(new DataColumn("lastName", typeof(string)));
+            dt.Columns.Add(new DataColumn("phone", typeof(string)));
+            dt.Columns.Add(new DataColumn("address", typeof(string)));
+            dt.Columns.Add(new DataColumn("city", typeof(string)));
+            dt.Columns.Add(new DataColumn("postalCode", typeof(string)));
+            Console.WriteLine("Collecting data...");
+            
+            while (dr.Read())
+            {
+                var row = dt.NewRow();
+                row["user_id"] = Convert.ToInt32(dr["user_id"]);
+                row["firstName"] = dr["firstName"];
+                row["lastName"] = dr["lastName"];
+                row["phone"] = dr["phone"];
+                row["address"] = dr["address"];
+                row["city"] = dr["city"];
+                row["postalCode"] = dr["postalCode"];
+                dt.Rows.Add(row);
+            }
+                
+            Console.WriteLine("The whole " + role + " ordered by " + order + ": ");
+            PrintTable(dt);
+            ncon.Close();
+            dt.AcceptChanges();
+        }
+
+        public void menuDispUser()
+        {
+            Console.WriteLine("Do you want to display :");
+            Console.WriteLine("1 : Client");
+            Console.WriteLine("2 : Employee");
+            var choice = Convert.ToInt32(Console.ReadLine());
+            while (choice != 1 && choice != 2)
+            {
+                Console.WriteLine("Please enter a correct number");
+                choice = Convert.ToInt32(Console.ReadLine());
+            }
+
+            if (choice == 1)
+            {
+                Console.WriteLine("How do you want to order ?");
+                Console.WriteLine("1 : By city");
+                Console.WriteLine("2 : By alphabetic order");
+                choice = Convert.ToInt32(Console.ReadLine());
+                while (choice != 1 && choice != 2)
+                {
+                    Console.WriteLine("Please enter a correct number");
+                    choice = Convert.ToInt32(Console.ReadLine());
+                }
+
+                if (choice == 1)
+                {
+                    displayUser(1,"city", "clients");
+                }
+                else
+                {
+                    displayUser(1,"alphabetic", "clients");
+                }
+            }
+            else
+            {
+                Console.WriteLine("How do you want to order ?");
+                Console.WriteLine("1 : By city");
+                Console.WriteLine("2 : By alphabetic order");
+                choice = Convert.ToInt32(Console.ReadLine());
+                while (choice != 1 && choice != 2)
+                {
+                    Console.WriteLine("Please enter a correct number");
+                    choice = Convert.ToInt32(Console.ReadLine());
+                }
+
+                if (choice == 1)
+                {
+                    displayUser(2,"city","employees");
+                }
+                else
+                {
+                    displayUser(2,"alphabetic","employees");
+                }
+            }
+        }
+
+        public int getAvgPrice()
+        {
+            var avgPrice = 0;
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT AVG(price) FROM orders", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                avgPrice = Convert.ToInt32(dr["avg"]);
+            }
+            ncon.Close();
+            return avgPrice;
+        }
+
+        public int getAvgPriceClient()
+        {
+            var avgPrice = 0;
+            var clientId = 0;
+            Console.WriteLine("Please write the client's first name");
+            var clientName = Console.ReadLine();
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT user_id FROM users WHERE firstname = '" + clientName + "'", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                clientId = Convert.ToInt32(dr["user_id"].ToString());
+            }
+            ncon.Close();
+            cmd = new NpgsqlCommand("SELECT AVG(price) FROM orders", ncon);
+            ncon.Open();
+            dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                avgPrice = Convert.ToInt32(dr["avg"]);
+            }
+            ncon.Close();
+            return avgPrice;
         }
 
         public static void Main(string[] args)
@@ -536,12 +793,14 @@ namespace Projet_pizzeria
                 }
 
                 myApp.getMenu();
-                Console.WriteLine("To create a new order, type 1");
-                Console.WriteLine("To add a new user, type 2");
-                Console.WriteLine("To change the availability of an item, type 3");
-                Console.WriteLine("To exit the app, type 0");
+                Console.WriteLine("Please indicate your choice");
+                Console.WriteLine("1: Create a new order");
+                Console.WriteLine("2: Add a new user");
+                Console.WriteLine("3: Change the availability of an item");
+                Console.WriteLine("4: Stats module");
+                Console.WriteLine("0: Exit the app");
                 var choice = Convert.ToInt32(Console.ReadLine());
-                while (choice != 1 && choice != 2 && choice != 3 && choice != 0)
+                while (choice != 1 && choice != 2 && choice != 3 && choice != 4 && choice != 0)
                 {
                     Console.WriteLine("Please enter a correct value.");
                     choice = Convert.ToInt32(Console.ReadLine());
@@ -559,6 +818,37 @@ namespace Projet_pizzeria
                 else if (choice == 3)
                 {
                     myApp.changeAvailable();
+                }
+                else if (choice == 4)
+                {
+                    Console.WriteLine("Welcome to the stats module");
+                    Console.WriteLine("Please indicate your choice");
+                    Console.WriteLine("1: Get the number of orders taken by a clerk");
+                    Console.WriteLine("2: Get the number of deliveries made by a driver");
+                    Console.WriteLine("3: Get a list of the orders created between two dates");
+                    Console.WriteLine("4: Get the average price of all the orders");
+                    Console.WriteLine("5: Get the average price of the orders of a client");
+                    var choice2 = Convert.ToInt32(Console.ReadLine());
+                    switch (choice2)
+                    {
+                        case 1:
+                            Console.WriteLine("Total commands: " + myApp.getClerkOrders());
+                            break;
+                        case 2:
+                            Console.WriteLine("Total deliveries: " + myApp.getDeliveries());
+                            break;
+                        case 3:
+                            myApp.getOrdersByDate();
+                            break;
+                        case 4:
+                            Console.WriteLine("The average price of all orders is " + myApp.getAvgPrice());
+                            break;
+                        case 5:
+                            Console.WriteLine("Average price of this client's orders is " + myApp.getAvgPriceClient());
+                            break;
+                        default:
+                            break;
+                    }
                 }
                 else if (choice == 0)
                 {
