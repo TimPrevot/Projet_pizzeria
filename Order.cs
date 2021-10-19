@@ -11,6 +11,7 @@ namespace Projet_pizzeria
         private DateTime date;
         private int client;
         private int clerk;
+        private int price;
         private List<Product> items;
 
         // Constructor
@@ -18,6 +19,7 @@ namespace Projet_pizzeria
         {
             this.items = new List<Product>();
             this.Items = new List<Product>();
+            this.price = 0;
         }
 
         // Getters and setters
@@ -28,6 +30,8 @@ namespace Projet_pizzeria
         public int Client { get; set; }
 
         public int Clerk { get; set; }
+        
+        public int Price { get; set; }
         
         public List<Product> Items { get; set; }
     }
