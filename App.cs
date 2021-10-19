@@ -23,31 +23,41 @@ namespace Projet_pizzeria
         private User connectedClerk;
         private User actualClient;
         private List<Product> menu;
-        
+
+        private const string PostgreConStr =
+            "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
+
         public User ConnectedClerk { get; set; }
-        
+
         public User ActualClient { get; set; }
-        
+
         public bool IsConnected { get; set; }
-        
+
         public List<Product> Menu { get; set; }
-        
+
         // Function to connect the clerk
         public bool connectClerk()
         {
-            const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-            var ncon = new NpgsqlConnection(postgreConStr);
-            
-            // TODO Input check
+            var ncon = new NpgsqlConnection(PostgreConStr);
             Console.WriteLine("username: ");
             var username = Console.ReadLine();
             Console.WriteLine("password: ");
+            var pwd = Console.ReadLine();
+            while (username.GetType() != typeof(string) || pwd.GetType() != typeof(string) || username == "" ||
+                   pwd == "")
+            {
+                Console.WriteLine("Please enter correct values");
+                Console.WriteLine("username: ");
+                username = Console.ReadLine();
+                Console.WriteLine("password: ");
+                pwd = Console.ReadLine();
+            }
+
             var hashedPwd = "";
             var user_id = -1;
             var firstname = "";
             var lastname = "";
             var telephone = "";
-            var pwd = Console.ReadLine();
             var cmd = new NpgsqlCommand("SELECT * FROM users WHERE username = '" + username + "'", ncon);
             Console.WriteLine("SELECT * FROM users WHERE username = '" + username + "'");
             ncon.Open();
@@ -75,9 +85,10 @@ namespace Projet_pizzeria
                 lastname = dr["lastname"].ToString();
                 telephone = dr["telephone"].ToString();
             }
+
             ncon.Close();
             dt.AcceptChanges();
-            
+
             using (SHA256 sha256Hash = SHA256.Create())
             {
                 string hash = GetHash(sha256Hash, pwd);
@@ -90,11 +101,10 @@ namespace Projet_pizzeria
                     connectedClerk.LastName = lastname;
                     connectedClerk.Tel = telephone;
                     connectedClerk.Username = username;
-                    
+
                     Console.WriteLine("Clerk connected : " + connectedClerk.FirstName + " " +
                                       connectedClerk.LastName + ", tel: " + connectedClerk.Tel);
                     return true;
-
                 }
                 else
                 {
@@ -107,9 +117,8 @@ namespace Projet_pizzeria
         // Function to get all the available items from the db
         public void getMenu()
         {
-            const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-            var ncon = new NpgsqlConnection(postgreConStr);
-            var cmd = new NpgsqlCommand("SELECT * FROM menu WHERE available", ncon);
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand("SELECT * FROM menu WHERE available ORDER BY size", ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
 
@@ -140,59 +149,103 @@ namespace Projet_pizzeria
                 newItem.Available = Convert.ToBoolean(dr["product_id"]);
                 menu.Add(newItem);
             }
+
             Console.WriteLine("All items collected.");
             Console.WriteLine("The whole menu today is: ");
             PrintTable(dt);
             ncon.Close();
             dt.AcceptChanges();
         }
-        
+
         // Function to change the available parameter on a product
         public void changeAvailable()
         {
-            // TODO input check
             Console.WriteLine("Please write the name of the product you want to modify: ");
             var productName = Console.ReadLine();
             Console.WriteLine("Please indicate the size of the item (1, 2 or 3");
-            int size = Convert.ToInt32(Console.ReadLine());
-            
-            const string postgreConStr = "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-            var ncon = new NpgsqlConnection(postgreConStr);
-            var res = false;
-            var cmd = new NpgsqlCommand("SELECT available FROM menu WHERE name = '" + productName + "' AND size = '" +
-                                        size + "'", ncon);
+            var productSize = Convert.ToInt32(Console.ReadLine());
+            while (productName.GetType() != typeof(string) || productSize.GetType() != typeof(int) ||
+                   productName == "" ||
+                   productSize == 0)
+            {
+                Console.WriteLine("Please enter correct values");
+                Console.WriteLine("Product name: ");
+                productName = Console.ReadLine();
+                Console.WriteLine("Product size: ");
+                productSize = Convert.ToInt32(Console.ReadLine());
+            }
+
+            var checkProduct = false;
+
+            // Input check
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand(
+                "SELECT name, size FROM menu WHERE name = '" + productName + "' AND size = '" + productSize + "'",
+                ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
-
             var dt = new DataTable();
-            dt.Columns.Add(new DataColumn("available", typeof(bool)));
+            dt.Columns.Add(new DataColumn("name", typeof(string)));
+            dt.Columns.Add(new DataColumn("size", typeof(int)));
             while (dr.Read())
             {
                 var row = dt.NewRow();
-                row["available"] = dr["available"];
+                row["name"] = dr["name"];
+                row["size"] = dr["size"];
                 dt.Rows.Add(row);
-                res = Convert.ToBoolean(dr["available"]);
+                if (dr["name"].ToString() == productName && Convert.ToInt32(dr["size"].ToString()) == productSize)
+                {
+                    checkProduct = true;
+                }
+                else
+                {
+                    Console.WriteLine("Failure : this item does not exist");
+                }
             }
+
             ncon.Close();
             dt.AcceptChanges();
-            
-            if (res == true)
+
+            if (checkProduct == true)
             {
-                cmd = new NpgsqlCommand("UPDATE menu SET available = false WHERE name = '" + productName +
-                                            "' AND size = '" + size + "'", ncon);
+                var res = false;
+                cmd = new NpgsqlCommand("SELECT available FROM menu WHERE name = '" + productName + "' AND size = '" +
+                                        productSize + "'", ncon);
+                ncon.Open();
+                dr = cmd.ExecuteReader();
+
+                dt = new DataTable();
+                dt.Columns.Add(new DataColumn("available", typeof(bool)));
+                while (dr.Read())
+                {
+                    var row = dt.NewRow();
+                    row["available"] = dr["available"];
+                    dt.Rows.Add(row);
+                    res = Convert.ToBoolean(dr["available"]);
+                }
+
+                ncon.Close();
+                dt.AcceptChanges();
+
+                if (res == true)
+                {
+                    cmd = new NpgsqlCommand("UPDATE menu SET available = false WHERE name = '" + productName +
+                                            "' AND size = '" + productSize + "'", ncon);
+                }
+                else
+                {
+                    cmd = new NpgsqlCommand("UPDATE menu SET available = true WHERE name = '" + productName +
+                                            "' AND size = '" +
+                                            productSize + "'", ncon);
+                }
+
+                ncon.Open();
+                cmd.ExecuteNonQuery();
+                ncon.Close();
+                getMenu();
             }
-            else
-            {
-                cmd = new NpgsqlCommand("UPDATE menu SET available = true WHERE name = '" + productName + "' AND size = '" +
-                                        size + "'", ncon);
-            }
-            
-            ncon.Open();
-            cmd.ExecuteNonQuery();
-            ncon.Close();
-            getMenu();
         }
-        
+
         // Function to hash a string input
         private static string GetHash(HashAlgorithm hashAlgorithm, string input)
         {
@@ -228,12 +281,16 @@ namespace Projet_pizzeria
             // If this is not the client's first order, we get his info from the database
             if (isNew == 1)
             {
-                const string postgresConStr =
-                    "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-                var ncon = new NpgsqlConnection(postgresConStr);
-                // TODO Input check
+                var ncon = new NpgsqlConnection(PostgreConStr);
                 Console.WriteLine("Please enter the client's phone number");
                 var telClient = Console.ReadLine();
+                while (telClient.GetType() != typeof(string) || telClient == "")
+                {
+                    Console.WriteLine("Please enter a valid input");
+                    Console.WriteLine("Client phone number: ");
+                    telClient = Console.ReadLine();
+                }
+
                 var cmd = new NpgsqlCommand("SELECT * FROM users WHERE telephone = '" + telClient + "'", ncon);
                 ncon.Open();
                 var dr = cmd.ExecuteReader();
@@ -277,39 +334,95 @@ namespace Projet_pizzeria
             else if (isNew == 0)
             {
                 this.addNewUser();
-                // TODO put the new user's info in the actualClient variable
             }
         }
 
         // Function to add a new user to the db
         public void addNewUser()
         {
-            // TODO Input checks
             Console.WriteLine("Please enter the user's first name: ");
             var firstname = Console.ReadLine();
+            while (firstname.GetType() != typeof(string) || firstname == "")
+            {
+                Console.WriteLine("your first name needs to be a string !");
+                firstname = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's last name: ");
             var lastname = Console.ReadLine();
+            while (lastname.GetType() != typeof(string) || lastname == "")
+            {
+                Console.WriteLine("your first name needs to be a string !");
+                lastname = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's phone number with the indicative: ");
             var tel = Console.ReadLine();
+            while (tel.GetType() != typeof(string) || tel == "")
+            {
+                Console.WriteLine("your first name need to be a string !");
+                tel = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's address: ");
             var address = Console.ReadLine();
+            while (address.GetType() != typeof(string) || address == "")
+            {
+                Console.WriteLine("your first name need to be a string !");
+                address = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's city: ");
             var city = Console.ReadLine();
+            while (city.GetType() != typeof(string) || city == "")
+            {
+                Console.WriteLine("your first name need to be a string !");
+                city = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's postal code: ");
             var postalCode = Console.ReadLine();
+            while (postalCode.GetType() != typeof(string) || postalCode == "")
+            {
+                Console.WriteLine("your first name need to be a string !");
+                postalCode = Console.ReadLine();
+            }
+
             Console.WriteLine("Please enter the user's entity type: ");
             Console.WriteLine("1: clerk");
             Console.WriteLine("2: client");
             var entity = Convert.ToInt32(Console.ReadLine());
-            string username = null;
-            string pwd = null;
+            while (entity != 1 && entity != 2)
+            {
+                Console.WriteLine("Please type a correct value");
+                entity = Convert.ToInt32(Console.ReadLine());
+            }
+            var username = "";
+            var pwd = "";
+            
             if (entity == 1)
             {
-                // TODO Input checks
                 Console.WriteLine("Please enter the user's username: ");
                 username = Console.ReadLine();
                 Console.WriteLine("Please enter the user's password: ");
                 pwd = Console.ReadLine();
+                var checkValues = false;
+                do
+                {
+                    if (username.GetType() != typeof(string) || pwd.GetType() != typeof(string))
+                    {
+                        Console.WriteLine("Please enter correct inputs");
+                        Console.Write("username:");
+                        username = Console.ReadLine();
+                        Console.Write("password: ");
+                        pwd = Console.ReadLine();
+                    }
+                    else
+                    {
+                        checkValues = true;
+                    }
+                } while (!checkValues);
+
                 using (SHA256 sha256hash = SHA256.Create())
                 {
                     var hashPwd = GetHash(sha256hash, pwd);
@@ -317,26 +430,26 @@ namespace Projet_pizzeria
                 }
             }
 
-            const string postgreConStr =
-                "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-            var ncon = new NpgsqlConnection(postgreConStr);
+            var ncon = new NpgsqlConnection(PostgreConStr);
             var req = "";
             if (entity == 1)
             {
-                req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" + address +
-                          "', '" + city + "', '" + postalCode + "', '" + entity + "', '" + username + "', '" + pwd + "')";
+                req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" +
+                      address +
+                      "', '" + city + "', '" + postalCode + "', '" + entity + "', '" + username + "', '" + pwd + "')";
             }
             else
             {
-                req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" + address +
-                          "', '" + city + "', '" + postalCode + "', '" + entity + "')";
+                req = "INSERT INTO users VALUES (default, '" + firstname + "', '" + lastname + "', '" + tel + "', '" +
+                      address +
+                      "', '" + city + "', '" + postalCode + "', '" + entity + "')";
             }
-            
+
             var cmd = new NpgsqlCommand(req, ncon);
             ncon.Open();
             cmd.ExecuteNonQuery();
             ncon.Close();
-            Console.WriteLine("Client added !");
+            Console.WriteLine("User added !");
         }
 
         // Function to create a new order
@@ -345,17 +458,48 @@ namespace Projet_pizzeria
             var newOrder = new Order();
             newOrder.Date = DateTime.Now;
             var addMore = true;
+            var checkAvailable = true;
+            var ncon = new NpgsqlConnection(PostgreConStr);
             while (addMore)
             {
-                // TODO check the availability of the item before adding it
                 var newProduct = new Product();
                 Console.WriteLine("Please enter the name of the item :");
                 var itemName = Console.ReadLine();
                 Console.WriteLine("Please enter the size of the item :");
                 var itemSize = Console.ReadLine();
-                newProduct.Name = itemName;
-                newProduct.Size = itemSize;
-                newOrder.Items.Add(newProduct);
+                var cmd = new NpgsqlCommand(
+                    "SELECT available FROM menu WHERE name = '" + itemName + "' AND size = '" + itemSize + "'", ncon);
+                ncon.Open();
+                var dr = cmd.ExecuteReader();
+                var dt = new DataTable();
+                dt.Columns.Add(new DataColumn("name", typeof(string)));
+                dt.Columns.Add(new DataColumn("size", typeof(int)));
+                while (dr.Read())
+                {
+                    var row = dt.NewRow();
+                    row["available"] = dr["available"];
+                    dt.Rows.Add(row);
+                    if (Convert.ToBoolean(dr["available"]) == false)
+                    {
+                        Console.WriteLine("Sorry ! This item is not available");
+                        checkAvailable = false;
+                    }
+                    else
+                    {
+                        checkAvailable = true;
+                    }
+                }
+
+                ncon.Close();
+                dt.AcceptChanges();
+
+                if (checkAvailable)
+                {
+                    newProduct.Name = itemName;
+                    newProduct.Size = itemSize;
+                    newOrder.Items.Add(newProduct);
+                }
+
                 Console.WriteLine("Do you want to add one more item ? 1 for Yes, 0 for No");
                 var choice = Convert.ToInt32(Console.ReadLine());
                 if (choice == 0)
@@ -363,17 +507,15 @@ namespace Projet_pizzeria
                     addMore = false;
                 }
             }
-            const string postgreConStr = 
-                "Server=localhost;Port=5432;UserId=postgres;Password=abcd1234;Database=Projet_pizzeria;";
-            var ncon = new NpgsqlConnection(postgreConStr);
+
             var reqItems = "";
             for (int i = 0; i < newOrder.Items.Count; i++)
             {
                 reqItems = String.Concat(reqItems, "', '", newOrder.Items[i].Name);
             }
 
-            var cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES ('" + newOrder.OrderId + "', '" +
-                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" + 
+            var cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES (default, '" +
+                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
                                          this.connectedClerk.UserId + reqItems + "')", ncon);
             ncon.Open();
             cmd2.ExecuteNonQuery();
@@ -392,6 +534,7 @@ namespace Projet_pizzeria
                 {
                     isConnected = myApp.connectClerk();
                 }
+
                 myApp.getMenu();
                 Console.WriteLine("To create a new order, type 1");
                 Console.WriteLine("To add a new user, type 2");
