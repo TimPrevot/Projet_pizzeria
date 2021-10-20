@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Schema;
 using Npgsql;
 
@@ -439,10 +440,6 @@ namespace Projet_pizzeria
                     newProduct.Price = Convert.ToInt32(dr["price"].ToString());
                 }
                 ncon.Close();
-                /*foreach (var item in this.menu.Where(item => item.Name.Equals(itemName)))
-                {
-                    newProduct.Price = item.Price;
-                }*/
 
                 cmd = new NpgsqlCommand(
                     "SELECT available FROM menu WHERE name = '" + itemName + "' AND size = '" + itemSize + "'", ncon);
@@ -516,6 +513,20 @@ namespace Projet_pizzeria
             cmd2.ExecuteNonQuery();
             ncon.Close();
             Console.WriteLine("Created order");
+        }
+        
+        // Function to send a new order to the kitchen
+        public void sendOrder()
+        {
+            Console.WriteLine("Order sent to the kitchen");
+            Console.WriteLine("Sending order to the driver...");
+            var t = Task.Run(() =>
+            {
+                Console.WriteLine("Sending confirmation message to the client...");
+            });
+            var ts = TimeSpan.FromMilliseconds(1500);
+            
+            t.Wait(ts);
         }
 
         // Function to get the number of deliveries made by a driver
@@ -647,10 +658,10 @@ namespace Projet_pizzeria
             dt.AcceptChanges();
         }
         
-        public void displayUser(int entity, string order, string role)
+        public void displayUsers(int entity, string orderBy, string role)
         {
             var ncon = new NpgsqlConnection(PostgreConStr);
-            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id="+entity+" ORDER BY "+ order +" ", ncon);
+            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id="+entity+" ORDER BY "+ orderBy +" ", ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
             
@@ -677,13 +688,13 @@ namespace Projet_pizzeria
                 dt.Rows.Add(row);
             }
                 
-            Console.WriteLine("The whole " + role + " ordered by " + order + ": ");
+            Console.WriteLine("The whole " + role + " ordered by " + orderBy + ": ");
             PrintTable(dt);
             ncon.Close();
             dt.AcceptChanges();
         }
 
-        public void menuDispUser()
+        public void menuDisplay()
         {
             Console.WriteLine("Do you want to display :");
             Console.WriteLine("1 : Client");
@@ -709,11 +720,11 @@ namespace Projet_pizzeria
 
                 if (choice == 1)
                 {
-                    displayUser(1,"city", "clients");
+                    displayUsers(1,"city", "clients");
                 }
                 else
                 {
-                    displayUser(1,"alphabetic", "clients");
+                    displayUsers(1,"alphabetic", "clients");
                 }
             }
             else
@@ -730,11 +741,11 @@ namespace Projet_pizzeria
 
                 if (choice == 1)
                 {
-                    displayUser(2,"city","employees");
+                    displayUsers(2,"city","employees");
                 }
                 else
                 {
-                    displayUser(2,"alphabetic","employees");
+                    displayUsers(2,"alphabetic","employees");
                 }
             }
         }
@@ -806,53 +817,74 @@ namespace Projet_pizzeria
                     choice = Convert.ToInt32(Console.ReadLine());
                 }
 
-                if (choice == 1)
+                switch (choice)
                 {
-                    myApp.checkUser();
-                    myApp.createOrder();
-                }
-                else if (choice == 2)
-                {
-                    myApp.addNewUser();
-                }
-                else if (choice == 3)
-                {
-                    myApp.changeAvailable();
-                }
-                else if (choice == 4)
-                {
-                    Console.WriteLine("Welcome to the stats module");
-                    Console.WriteLine("Please indicate your choice");
-                    Console.WriteLine("1: Get the number of orders taken by a clerk");
-                    Console.WriteLine("2: Get the number of deliveries made by a driver");
-                    Console.WriteLine("3: Get a list of the orders created between two dates");
-                    Console.WriteLine("4: Get the average price of all the orders");
-                    Console.WriteLine("5: Get the average price of the orders of a client");
-                    var choice2 = Convert.ToInt32(Console.ReadLine());
-                    switch (choice2)
+                    case 1:
                     {
-                        case 1:
-                            Console.WriteLine("Total commands: " + myApp.getClerkOrders());
-                            break;
-                        case 2:
-                            Console.WriteLine("Total deliveries: " + myApp.getDeliveries());
-                            break;
-                        case 3:
-                            myApp.getOrdersByDate();
-                            break;
-                        case 4:
-                            Console.WriteLine("The average price of all orders is " + myApp.getAvgPrice());
-                            break;
-                        case 5:
-                            Console.WriteLine("Average price of this client's orders is " + myApp.getAvgPriceClient());
-                            break;
-                        default:
-                            break;
+                        myApp.checkUser();
+                        myApp.createOrder();
+                        myApp.sendOrder();
+                        var t = Task.Run(() =>
+                        {
+                            Console.WriteLine("Order picked up by the driver!");
+                        });
+                        var ts = TimeSpan.FromMilliseconds(30000);
+                        t.Wait(ts);
+                        Console.WriteLine("Order delivered !");
+                        break;
                     }
-                }
-                else if (choice == 0)
-                {
-                    closeApp = true;
+                    case 2:
+                        myApp.addNewUser();
+                        break;
+                    case 3:
+                        myApp.changeAvailable();
+                        break;
+                    case 4:
+                    {
+                        Console.WriteLine("Welcome to the stats module");
+                        Console.WriteLine("Please indicate your choice");
+                        Console.WriteLine("1: Get the number of orders taken by a clerk");
+                        Console.WriteLine("2: Get the number of deliveries made by a driver");
+                        Console.WriteLine("3: Get a list of the orders created between two dates");
+                        Console.WriteLine("4: Get the average price of all the orders");
+                        Console.WriteLine("5: Get the average price of the orders of a client");
+                        Console.WriteLine("6: Display all the users");
+                        var choice2 = Convert.ToInt32(Console.ReadLine());
+                        while (choice2 != 1 && choice2 != 2 && choice2 != 3 && choice2 != 4 && choice2 != 5 && choice2 != 6 &&
+                               choice2 != 0)
+                        {
+                            Console.WriteLine("Please enter a correct value");
+                            choice2 = Convert.ToInt32(Console.ReadLine());
+                        }
+                        switch (choice2)
+                        {
+                            case 1:
+                                Console.WriteLine("Total commands: " + myApp.getClerkOrders());
+                                break;
+                            case 2:
+                                Console.WriteLine("Total deliveries: " + myApp.getDeliveries());
+                                break;
+                            case 3:
+                                myApp.getOrdersByDate();
+                                break;
+                            case 4:
+                                Console.WriteLine("The average price of all orders is " + myApp.getAvgPrice());
+                                break;
+                            case 5:
+                                Console.WriteLine("Average price of this client's orders is " + myApp.getAvgPriceClient());
+                                break;
+                            case 6:
+                                myApp.menuDisplay();
+                                break;
+                            default:
+                                break;
+                        }
+
+                        break;
+                    }
+                    case 0:
+                        closeApp = true;
+                        break;
                 }
             }
         }
