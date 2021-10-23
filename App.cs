@@ -287,13 +287,22 @@ namespace Projet_pizzeria
             }
             else
             {
-                this.addNewUser();
+                var newUser = this.addNewUser();
+                this.actualClient.UserId = newUser.UserId;
+                this.actualClient.FirstName = newUser.FirstName;
+                this.actualClient.LastName = newUser.LastName;
+                this.actualClient.Tel = newUser.Tel;
+                this.actualClient.Address = newUser.Address;
+                this.actualClient.City = newUser.City;
+                this.actualClient.PostalCode = newUser.PostalCode;
+                this.actualClient.Entity = newUser.Entity;
             }
         }
 
         // Function to add a new user to the db
-        public void addNewUser()
+        public User addNewUser()
         {
+            var newUser = new User();
             Console.WriteLine("Please enter the user's first name: ");
             var firstname = Console.ReadLine();
             while (firstname.GetType() != typeof(string) || firstname == "")
@@ -301,6 +310,8 @@ namespace Projet_pizzeria
                 Console.WriteLine("your first name needs to be a string !");
                 firstname = Console.ReadLine();
             }
+
+            newUser.FirstName = firstname;
 
             Console.WriteLine("Please enter the user's last name: ");
             var lastname = Console.ReadLine();
@@ -310,6 +321,8 @@ namespace Projet_pizzeria
                 lastname = Console.ReadLine();
             }
 
+            newUser.LastName = lastname;
+
             Console.WriteLine("Please enter the user's phone number with the indicative: ");
             var tel = Console.ReadLine();
             while (tel.GetType() != typeof(string) || tel == "")
@@ -317,6 +330,8 @@ namespace Projet_pizzeria
                 Console.WriteLine("your first name need to be a string !");
                 tel = Console.ReadLine();
             }
+
+            newUser.Tel = tel;
 
             Console.WriteLine("Please enter the user's address: ");
             var address = Console.ReadLine();
@@ -326,6 +341,8 @@ namespace Projet_pizzeria
                 address = Console.ReadLine();
             }
 
+            newUser.Address = address;
+
             Console.WriteLine("Please enter the user's city: ");
             var city = Console.ReadLine();
             while (city.GetType() != typeof(string) || city == "")
@@ -334,6 +351,8 @@ namespace Projet_pizzeria
                 city = Console.ReadLine();
             }
 
+            newUser.City = city;
+
             Console.WriteLine("Please enter the user's postal code: ");
             var postalCode = Console.ReadLine();
             while (postalCode.GetType() != typeof(string) || postalCode == "")
@@ -341,6 +360,8 @@ namespace Projet_pizzeria
                 Console.WriteLine("your first name need to be a string !");
                 postalCode = Console.ReadLine();
             }
+
+            newUser.PostalCode = postalCode;
 
             Console.WriteLine("Please enter the user's entity type: ");
             Console.WriteLine("1: clerk");
@@ -352,6 +373,8 @@ namespace Projet_pizzeria
                 Console.WriteLine("Please type a correct value");
                 entity = Convert.ToInt32(Console.ReadLine());
             }
+
+            newUser.Entity = entity;
 
             var username = "";
             var pwd = "";
@@ -379,10 +402,13 @@ namespace Projet_pizzeria
                     }
                 } while (!checkValues);
 
+                newUser.Username = username;
+
                 using (SHA256 sha256hash = SHA256.Create())
                 {
                     var hashPwd = GetHash(sha256hash, pwd);
                     pwd = hashPwd;
+                    newUser.Password = pwd;
                 }
             }
 
@@ -413,6 +439,16 @@ namespace Projet_pizzeria
             cmd.ExecuteNonQuery();
             ncon.Close();
             Console.WriteLine("User added !");
+            cmd = new NpgsqlCommand("SELECT user_id FROM users WHERE telephone = '" + tel + "'", ncon);
+            ncon.Open();
+            var dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                newUser.UserId = Convert.ToInt32(dr["user_id"]);
+            }
+
+            ncon.Close();
+            return newUser;
         }
 
         // Function to create a new order
@@ -496,6 +532,12 @@ namespace Projet_pizzeria
 
             ncon.Close();
 
+            // Setting the driver's status to available = false
+            cmd2 = new NpgsqlCommand("UPDATE users SET available = false WHERE user_id = '" + driverId + "'", ncon);
+            ncon.Open();
+            cmd2.ExecuteNonQuery();
+            ncon.Close();
+
             var reqItems = "";
             for (int i = 0; i < 6; i++)
             {
@@ -516,11 +558,11 @@ namespace Projet_pizzeria
             cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES (default, '" +
                                      newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
                                      this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" +
-                                     newOrder.Price + "')", ncon);
+                                     newOrder.Price + "', false)", ncon);
             Console.WriteLine("req: INSERT INTO orders VALUES (default, '" +
                               newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
                               this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price +
-                              "')");
+                              "', false)");
             ncon.Open();
             cmd2.ExecuteNonQuery();
             ncon.Close();
@@ -532,6 +574,7 @@ namespace Projet_pizzeria
             {
                 newOrderId = Convert.ToInt32(dr2["order_id"]);
             }
+
             ncon.Close();
             return newOrderId;
         }
@@ -665,6 +708,7 @@ namespace Projet_pizzeria
             dt.Columns.Add(new DataColumn("product5", typeof(string)));
             dt.Columns.Add(new DataColumn("product6", typeof(string)));
             dt.Columns.Add(new DataColumn("price", typeof(int)));
+            dt.Columns.Add(new DataColumn("paid", typeof(bool)));
             while (dr.Read())
             {
                 var row = dt.NewRow();
@@ -680,6 +724,7 @@ namespace Projet_pizzeria
                 row["product5"] = dr["product5"];
                 row["product6"] = dr["product6"];
                 row["price"] = dr["price"];
+                row["paid"] = dr["paid"];
                 dt.Rows.Add(row);
             }
 
@@ -692,31 +737,31 @@ namespace Projet_pizzeria
         public void displayUsers(int entity, string orderBy, string role)
         {
             var ncon = new NpgsqlConnection(PostgreConStr);
-            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id=" + entity + " ORDER BY " + orderBy + " ",
+            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id = " + entity + " ORDER BY " + orderBy + " ",
                 ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
 
             var dt = new DataTable();
             dt.Columns.Add(new DataColumn("user_id", typeof(int)));
-            dt.Columns.Add(new DataColumn("firstName", typeof(string)));
-            dt.Columns.Add(new DataColumn("lastName", typeof(string)));
-            dt.Columns.Add(new DataColumn("phone", typeof(string)));
+            dt.Columns.Add(new DataColumn("firstname", typeof(string)));
+            dt.Columns.Add(new DataColumn("lastname", typeof(string)));
+            dt.Columns.Add(new DataColumn("tel", typeof(string)));
             dt.Columns.Add(new DataColumn("address", typeof(string)));
             dt.Columns.Add(new DataColumn("city", typeof(string)));
-            dt.Columns.Add(new DataColumn("postalCode", typeof(string)));
+            dt.Columns.Add(new DataColumn("postal_code", typeof(string)));
             Console.WriteLine("Collecting data...");
 
             while (dr.Read())
             {
                 var row = dt.NewRow();
                 row["user_id"] = Convert.ToInt32(dr["user_id"]);
-                row["firstName"] = dr["firstName"];
-                row["lastName"] = dr["lastName"];
-                row["phone"] = dr["phone"];
+                row["firstname"] = dr["firstname"];
+                row["lastname"] = dr["lastname"];
+                row["tel"] = dr["telephone"];
                 row["address"] = dr["address"];
                 row["city"] = dr["city"];
-                row["postalCode"] = dr["postalCode"];
+                row["postal_code"] = dr["postal_code"];
                 dt.Rows.Add(row);
             }
 
@@ -756,7 +801,7 @@ namespace Projet_pizzeria
                 }
                 else
                 {
-                    displayUsers(1, "alphabetic", "clients");
+                    displayUsers(1, "firstname", "clients");
                 }
             }
             else
@@ -777,7 +822,7 @@ namespace Projet_pizzeria
                 }
                 else
                 {
-                    displayUsers(2, "alphabetic", "employees");
+                    displayUsers(2, "firstname", "employees");
                 }
             }
         }
@@ -826,6 +871,80 @@ namespace Projet_pizzeria
             return avgPrice;
         }
 
+        public void getOrderByID()
+        {
+            Console.WriteLine("Please enter the order's ID");
+            var orderId = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("What info do you want ?");
+            Console.WriteLine("1: All the info");
+            Console.WriteLine("2: Just the price");
+            var choice = Convert.ToInt32(Console.ReadLine());
+            while (choice != 1 && choice != 2)
+            {
+                Console.WriteLine("Please enter a correct value");
+                choice = Convert.ToInt32(Console.ReadLine());
+            }
+            var ncon = new NpgsqlConnection(PostgreConStr);
+            var cmd = new NpgsqlCommand();
+
+            if (choice == 1)
+            {
+                cmd = new NpgsqlCommand("SELECT * FROM orders WHERE order_id = '" + orderId + "'", ncon);
+                ncon.Open();
+                var dr = cmd.ExecuteReader();
+            
+                var dt = new DataTable();
+                dt.Columns.Add(new DataColumn("order_id", typeof(int)));
+                dt.Columns.Add(new DataColumn("date", typeof(DateTime)));
+                dt.Columns.Add(new DataColumn("client", typeof(int)));
+                dt.Columns.Add(new DataColumn("clerk", typeof(int)));
+                dt.Columns.Add(new DataColumn("driver", typeof(int)));
+                dt.Columns.Add(new DataColumn("product", typeof(string)));
+                dt.Columns.Add(new DataColumn("product2", typeof(string)));
+                dt.Columns.Add(new DataColumn("product3", typeof(string)));
+                dt.Columns.Add(new DataColumn("product4", typeof(string)));
+                dt.Columns.Add(new DataColumn("product5", typeof(string)));
+                dt.Columns.Add(new DataColumn("product6", typeof(string)));
+                dt.Columns.Add(new DataColumn("price", typeof(int)));
+                dt.Columns.Add(new DataColumn("paid", typeof(bool)));
+                while (dr.Read())
+                {
+                    var row = dt.NewRow();
+                    row["order_id"] = dr["order_id"];
+                    row["date"] = dr["date"];
+                    row["client"] = dr["client"];
+                    row["clerk"] = dr["clerk"];
+                    row["driver"] = dr["driver"];
+                    row["product"] = dr["product"];
+                    row["product2"] = dr["product2"];
+                    row["product3"] = dr["product3"];
+                    row["product4"] = dr["product4"];
+                    row["product5"] = dr["product5"];
+                    row["product6"] = dr["product6"];
+                    row["price"] = dr["price"];
+                    row["paid"] = dr["paid"];
+                    dt.Rows.Add(row);
+                }
+                PrintTable(dt);
+                ncon.Close();
+                dt.AcceptChanges();
+            }
+            else
+            {
+                cmd = new NpgsqlCommand("SELECT price FROM orders WHERE order_id = '" + orderId + "'", ncon);
+                var price = 0;
+                ncon.Open();
+                var dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    price = Convert.ToInt32(dr["price"]);
+                }
+                ncon.Close();
+                Console.WriteLine("The price of the order #" + orderId + " is " + price);
+            }
+            
+        }
+
         public static void Main(string[] args)
         {
             var myApp = new App();
@@ -843,10 +962,11 @@ namespace Projet_pizzeria
                 Console.WriteLine("1: Create a new order");
                 Console.WriteLine("2: Add a new user");
                 Console.WriteLine("3: Change the availability of an item");
-                Console.WriteLine("4: Stats module");
+                Console.WriteLine("4: Find infos about an order");
+                Console.WriteLine("5: Stats module");
                 Console.WriteLine("0: Exit the app");
                 var choice = Convert.ToInt32(Console.ReadLine());
-                while (choice != 1 && choice != 2 && choice != 3 && choice != 4 && choice != 0)
+                while (choice != 1 && choice != 2 && choice != 3 && choice != 4 && choice != 5 && choice != 0)
                 {
                     Console.WriteLine("Please enter a correct value.");
                     choice = Convert.ToInt32(Console.ReadLine());
@@ -865,6 +985,26 @@ namespace Projet_pizzeria
                             Console.WriteLine("Order #" + newOrderId + " picked up by the driver!");
                             await Task.Delay(30000);
                             Console.WriteLine("Order #" + newOrderId + " delivered !");
+                            var driverId = -1;
+                            var ncon = new NpgsqlConnection(PostgreConStr);
+                            var cmd = new NpgsqlCommand(
+                                "SELECT driver FROM orders WHERE order_id = '" + newOrderId + "'", ncon);
+                            ncon.Open();
+                            var dr = cmd.ExecuteReader();
+                            while (dr.Read())
+                            {
+                                driverId = Convert.ToInt32(dr["driver"]);
+                            }
+                            ncon.Close();
+
+                            var cmd2 = new NpgsqlCommand(
+                                "UPDATE orders SET paid = true WHERE order_id = '" + newOrderId + "'", ncon);
+                            cmd = new NpgsqlCommand("UPDATE users SET available = true WHERE user_id = '" + driverId + "'",
+                                ncon);
+                            ncon.Open();
+                            cmd.ExecuteNonQuery();
+                            cmd2.ExecuteNonQuery();
+                            ncon.Close();
                         });
                         break;
                     }
@@ -875,6 +1015,9 @@ namespace Projet_pizzeria
                         myApp.changeAvailable();
                         break;
                     case 4:
+                        myApp.getOrderByID();
+                        break;
+                    case 5:
                     {
                         Console.WriteLine("Welcome to the stats module");
                         Console.WriteLine("Please indicate your choice");
