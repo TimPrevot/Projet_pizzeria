@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Schema;
 using Npgsql;
@@ -415,12 +416,13 @@ namespace Projet_pizzeria
         }
 
         // Function to create a new order
-        public void createOrder()
+        public int createOrder()
         {
             var newOrder = new Order();
             newOrder.Date = DateTime.Now;
             var addMore = true;
             var checkAvailable = false;
+            var newOrderId = -1;
             var ncon = new NpgsqlConnection(PostgreConStr);
             while (addMore)
             {
@@ -439,6 +441,7 @@ namespace Projet_pizzeria
                 {
                     newProduct.Price = Convert.ToInt32(dr["price"].ToString());
                 }
+
                 ncon.Close();
 
                 cmd = new NpgsqlCommand(
@@ -465,6 +468,7 @@ namespace Projet_pizzeria
                     newOrder.Items.Add(newProduct);
                     newOrder.Price += newProduct.Price;
                 }
+
                 // TODO Input check
                 Console.WriteLine("Do you want to add one more item ? 1 for Yes, 0 for No");
                 checkAvailable = false;
@@ -473,8 +477,13 @@ namespace Projet_pizzeria
                 {
                     addMore = false;
                 }
+                else if (newOrder.Items.Count == 6)
+                {
+                    Console.WriteLine("You reached the maximum number of items !");
+                    addMore = false;
+                }
             }
-            
+
             // Choosing a driver
             var driverId = -1;
             var cmd2 = new NpgsqlCommand("SELECT user_id FROM users WHERE entity_id = 3 AND available", ncon);
@@ -484,8 +493,9 @@ namespace Projet_pizzeria
             {
                 driverId = Convert.ToInt32(dr2["user_id"].ToString());
             }
+
             ncon.Close();
-            
+
             var reqItems = "";
             for (int i = 0; i < 6; i++)
             {
@@ -504,29 +514,44 @@ namespace Projet_pizzeria
             }
 
             cmd2 = new NpgsqlCommand("INSERT INTO orders VALUES (default, '" +
-                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
-                                         this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price + "')", ncon);
+                                     newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
+                                     this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" +
+                                     newOrder.Price + "')", ncon);
             Console.WriteLine("req: INSERT INTO orders VALUES (default, '" +
-                                                                         newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
-                                                                         this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price + "')");
+                              newOrder.Date + "', '" + this.actualClient.UserId + "', '" +
+                              this.connectedClerk.UserId + "', '" + driverId + reqItems + ", '" + newOrder.Price +
+                              "')");
             ncon.Open();
             cmd2.ExecuteNonQuery();
             ncon.Close();
             Console.WriteLine("Created order");
-        }
-        
-        // Function to send a new order to the kitchen
-        public void sendOrder()
-        {
-            Console.WriteLine("Order sent to the kitchen");
-            Console.WriteLine("Sending order to the driver...");
-            var t = Task.Run(() =>
+            cmd2 = new NpgsqlCommand("SELECT order_id FROM orders WHERE date = '" + newOrder.Date + "'", ncon);
+            ncon.Open();
+            dr2 = cmd2.ExecuteReader();
+            while (dr2.Read())
             {
-                Console.WriteLine("Sending confirmation message to the client...");
+                newOrderId = Convert.ToInt32(dr2["order_id"]);
+            }
+            ncon.Close();
+            return newOrderId;
+        }
+
+        // Function to send a new order to the kitchen
+        public void sendOrder(int newOrderId)
+        {
+            Console.WriteLine("Order #" + newOrderId + " sent to the kitchen");
+            Console.WriteLine("Sending order #" + newOrderId + " to the driver...");
+            var t = Task.Run(async delegate
+            {
+                await Task.Delay(5000);
+                Console.WriteLine("Order #" + newOrderId + " sent to the driver");
             });
-            var ts = TimeSpan.FromMilliseconds(1500);
-            
-            t.Wait(ts);
+            Console.WriteLine("Sending confirmation message to the client...");
+            var t2 = Task.Run(async delegate
+            {
+                await Task.Delay(5000);
+                Console.WriteLine("Message sent");
+            });
         }
 
         // Function to get the number of deliveries made by a driver
@@ -560,6 +585,7 @@ namespace Projet_pizzeria
             {
                 totalDeliveries = Convert.ToInt32(dr["count"]);
             }
+
             ncon.Close();
             return totalDeliveries;
         }
@@ -615,11 +641,15 @@ namespace Projet_pizzeria
                 Console.Write("Second date (format: Jan 1, 2000) : ");
                 date2 = Console.ReadLine();
             }
+
             var parsedDate1 = DateTime.Parse(date1);
             var parsedDate2 = DateTime.Parse(date2);
             var ncon = new NpgsqlConnection(PostgreConStr);
+            Console.WriteLine("SELECT * FROM orders WHERE date BETWEEN '" + parsedDate1 + "' AND '" + parsedDate2 +
+                              "' ORDER BY date");
             var cmd = new NpgsqlCommand(
-                "SELECT * FROM orders WHERE date BETWEEN '" + parsedDate1 + "' AND '" + parsedDate2 + "' ORDER BY date", ncon);
+                "SELECT * FROM orders WHERE date BETWEEN '" + parsedDate1 + "' AND '" + parsedDate2 + "' ORDER BY date",
+                ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
             var dt = new DataTable();
@@ -646,25 +676,27 @@ namespace Projet_pizzeria
                 row["product"] = dr["product"];
                 row["product2"] = dr["product2"];
                 row["product3"] = dr["product3"];
-                row["product4"] = dr["produc4"];
+                row["product4"] = dr["product4"];
                 row["product5"] = dr["product5"];
                 row["product6"] = dr["product6"];
                 row["price"] = dr["price"];
                 dt.Rows.Add(row);
             }
+
             Console.WriteLine("All orders collected");
             PrintTable(dt);
             ncon.Close();
             dt.AcceptChanges();
         }
-        
+
         public void displayUsers(int entity, string orderBy, string role)
         {
             var ncon = new NpgsqlConnection(PostgreConStr);
-            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id="+entity+" ORDER BY "+ orderBy +" ", ncon);
+            var cmd = new NpgsqlCommand("SELECT * from users WHERE entity_id=" + entity + " ORDER BY " + orderBy + " ",
+                ncon);
             ncon.Open();
             var dr = cmd.ExecuteReader();
-            
+
             var dt = new DataTable();
             dt.Columns.Add(new DataColumn("user_id", typeof(int)));
             dt.Columns.Add(new DataColumn("firstName", typeof(string)));
@@ -674,7 +706,7 @@ namespace Projet_pizzeria
             dt.Columns.Add(new DataColumn("city", typeof(string)));
             dt.Columns.Add(new DataColumn("postalCode", typeof(string)));
             Console.WriteLine("Collecting data...");
-            
+
             while (dr.Read())
             {
                 var row = dt.NewRow();
@@ -687,7 +719,7 @@ namespace Projet_pizzeria
                 row["postalCode"] = dr["postalCode"];
                 dt.Rows.Add(row);
             }
-                
+
             Console.WriteLine("The whole " + role + " ordered by " + orderBy + ": ");
             PrintTable(dt);
             ncon.Close();
@@ -720,18 +752,18 @@ namespace Projet_pizzeria
 
                 if (choice == 1)
                 {
-                    displayUsers(1,"city", "clients");
+                    displayUsers(1, "city", "clients");
                 }
                 else
                 {
-                    displayUsers(1,"alphabetic", "clients");
+                    displayUsers(1, "alphabetic", "clients");
                 }
             }
             else
             {
                 Console.WriteLine("How do you want to order ?");
                 Console.WriteLine("1 : By city");
-                Console.WriteLine("2 : By alphabetic order");
+                Console.WriteLine("2 : By firstname");
                 choice = Convert.ToInt32(Console.ReadLine());
                 while (choice != 1 && choice != 2)
                 {
@@ -741,11 +773,11 @@ namespace Projet_pizzeria
 
                 if (choice == 1)
                 {
-                    displayUsers(2,"city","employees");
+                    displayUsers(2, "city", "employees");
                 }
                 else
                 {
-                    displayUsers(2,"alphabetic","employees");
+                    displayUsers(2, "alphabetic", "employees");
                 }
             }
         }
@@ -761,6 +793,7 @@ namespace Projet_pizzeria
             {
                 avgPrice = Convert.ToInt32(dr["avg"]);
             }
+
             ncon.Close();
             return avgPrice;
         }
@@ -779,14 +812,16 @@ namespace Projet_pizzeria
             {
                 clientId = Convert.ToInt32(dr["user_id"].ToString());
             }
+
             ncon.Close();
-            cmd = new NpgsqlCommand("SELECT AVG(price) FROM orders", ncon);
+            cmd = new NpgsqlCommand("SELECT AVG(price) FROM orders WHERE client = '" + clientId + "'", ncon);
             ncon.Open();
             dr = cmd.ExecuteReader();
             while (dr.Read())
             {
                 avgPrice = Convert.ToInt32(dr["avg"]);
             }
+
             ncon.Close();
             return avgPrice;
         }
@@ -822,15 +857,15 @@ namespace Projet_pizzeria
                     case 1:
                     {
                         myApp.checkUser();
-                        myApp.createOrder();
-                        myApp.sendOrder();
-                        var t = Task.Run(() =>
+                        var newOrderId = myApp.createOrder();
+                        myApp.sendOrder(newOrderId);
+                        var t = Task.Run(async delegate
                         {
-                            Console.WriteLine("Order picked up by the driver!");
+                            await Task.Delay(15000);
+                            Console.WriteLine("Order #" + newOrderId + " picked up by the driver!");
+                            await Task.Delay(30000);
+                            Console.WriteLine("Order #" + newOrderId + " delivered !");
                         });
-                        var ts = TimeSpan.FromMilliseconds(30000);
-                        t.Wait(ts);
-                        Console.WriteLine("Order delivered !");
                         break;
                     }
                     case 2:
@@ -850,12 +885,14 @@ namespace Projet_pizzeria
                         Console.WriteLine("5: Get the average price of the orders of a client");
                         Console.WriteLine("6: Display all the users");
                         var choice2 = Convert.ToInt32(Console.ReadLine());
-                        while (choice2 != 1 && choice2 != 2 && choice2 != 3 && choice2 != 4 && choice2 != 5 && choice2 != 6 &&
+                        while (choice2 != 1 && choice2 != 2 && choice2 != 3 && choice2 != 4 && choice2 != 5 &&
+                               choice2 != 6 &&
                                choice2 != 0)
                         {
                             Console.WriteLine("Please enter a correct value");
                             choice2 = Convert.ToInt32(Console.ReadLine());
                         }
+
                         switch (choice2)
                         {
                             case 1:
@@ -871,7 +908,8 @@ namespace Projet_pizzeria
                                 Console.WriteLine("The average price of all orders is " + myApp.getAvgPrice());
                                 break;
                             case 5:
-                                Console.WriteLine("Average price of this client's orders is " + myApp.getAvgPriceClient());
+                                Console.WriteLine("Average price of this client's orders is " +
+                                                  myApp.getAvgPriceClient());
                                 break;
                             case 6:
                                 myApp.menuDisplay();
