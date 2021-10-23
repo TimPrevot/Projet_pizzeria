@@ -952,10 +952,10 @@ namespace Projet_pizzeria
             bool isConnected = false;
             while (!closeApp)
             {
-                while (!isConnected)
+                /*while (!isConnected)
                 {
                     isConnected = myApp.connectClerk();
-                }
+                }*/
 
                 myApp.getMenu();
                 Console.WriteLine("Please indicate your choice");
